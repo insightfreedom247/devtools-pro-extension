@@ -1,59 +1,36 @@
-// Tạo panel mới trong DevTools
+// Create DevTools panel
 chrome.devtools.panels.create(
-    "DevTools Pro",
-    "icons/icon16.png",
-    "panel.html",
-    function(panel) {
-        console.log("Panel created");
-    }
+  'DevTools Pro',
+  'icons/icon16.png',
+  'panel.html',
+  panel => {
+    panel.onShown.addListener(window => {
+      console.log('Panel shown');
+    });
+    
+    panel.onHidden.addListener(() => {
+      console.log('Panel hidden');
+    });
+  }
 );
 
-// Tạo side panel trong Elements panel
-chrome.devtools.panels.elements.createSidebarPane(
-    "DevTools Pro",
-    function(sidebar) {
-        sidebar.setPage("sidebar.html");
-    }
-);
+// Create network panel
+chrome.devtools.network.onRequestFinished.addListener(request => {
+  analyzeRequest(request);
+});
 
-// Lắng nghe network requests
-chrome.devtools.network.onRequestFinished.addListener(
-    function(request) {
-        // Gửi thông tin request tới background script
-        chrome.runtime.sendMessage({
-            type: 'networkRequest',
-            url: request.request.url,
-            method: request.request.method,
-            status: request.response.status,
-            time: request.time,
-            size: request.response.bodySize
-        });
-    }
-);
+function analyzeRequest(request) {
+  const analysis = {
+    url: request.request.url,
+    method: request.request.method,
+    status: request.response.status,
+    timing: request.time,
+    size: request.response.bodySize,
+    type: request.type
+  };
 
-// Theo dõi console logs
-chrome.devtools.console.onMessageAdded.addListener(
-    function(message) {
-        chrome.runtime.sendMessage({
-            type: 'consoleLog',
-            content: message.text,
-            level: message.level,
-            timestamp: Date.now()
-        });
-    }
-);
-
-// Theo dõi performance
-let performanceBuffer = [];
-chrome.devtools.timeline.onEventRecorded.addListener(
-    function(event) {
-        performanceBuffer.push(event);
-        if (performanceBuffer.length > 1000) {
-            chrome.runtime.sendMessage({
-                type: 'performanceData',
-                data: performanceBuffer
-            });
-            performanceBuffer = [];
-        }
-    }
-);
+  chrome.runtime.sendMessage({
+    action: 'networkAnalysis',
+    data: analysis
+  });
+}

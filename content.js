@@ -1,160 +1,93 @@
-// Lưu trữ console logs gốc
-const originalConsole = {
-    log: console.log,
-    error: console.error,
-    warn: console.warn,
-    info: console.info
-};
+// Initialize content script
+console.log('DevTools Pro content script loaded');
 
-// Override console methods
-console.log = function(...args) {
-    const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ');
-    
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: message,
-        level: 'info',
-        timestamp: Date.now()
-    });
-    
-    originalConsole.log.apply(console, args);
-};
-
-console.error = function(...args) {
-    const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ');
-    
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: message,
-        level: 'error',
-        timestamp: Date.now()
-    });
-    
-    originalConsole.error.apply(console, args);
-};
-
-console.warn = function(...args) {
-    const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ');
-    
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: message,
-        level: 'warning',
-        timestamp: Date.now()
-    });
-    
-    originalConsole.warn.apply(console, args);
-};
-
-console.info = function(...args) {
-    const message = args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ');
-    
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: message,
-        level: 'info',
-        timestamp: Date.now()
-    });
-    
-    originalConsole.info.apply(console, args);
-};
-
-// Theo dõi performance
-const observer = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-        if (entry.entryType === 'resource') {
-            chrome.runtime.sendMessage({
-                type: 'networkRequest',
-                url: entry.name,
-                time: entry.duration,
-                timestamp: Date.now()
-            });
-        }
-    }
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  switch (request.action) {
+    case 'analyze':
+      analyzePerformance();
+      break;
+    case 'inspect':
+      inspectElement();
+      break;
+  }
+  return true;
 });
 
-observer.observe({
-    entryTypes: ['resource', 'navigation', 'paint']
-});
+// Performance analysis
+function analyzePerformance() {
+  const timing = window.performance.timing;
+  const performance = {
+    loadTime: timing.loadEventEnd - timing.navigationStart,
+    domReady: timing.domContentLoadedEventEnd - timing.navigationStart,
+    firstPaint: performance.getEntriesByType('paint')[0]?.startTime || 'N/A',
+    resources: performance.getEntriesByType('resource')
+  };
 
-// Theo dõi errors
-window.addEventListener('error', function(event) {
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: `Error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`,
-        level: 'error',
-        timestamp: Date.now()
-    });
-});
+  chrome.runtime.sendMessage({
+    action: 'performanceData',
+    data: performance
+  });
+}
 
-// Theo dõi unhandled rejections
-window.addEventListener('unhandledrejection', function(event) {
-    chrome.runtime.sendMessage({
-        type: 'consoleLog',
-        content: `Unhandled Promise Rejection: ${event.reason}`,
-        level: 'error',
-        timestamp: Date.now()
-    });
-});
+// Element inspection
+function inspectElement() {
+  document.addEventListener('mouseover', highlightElement);
+  document.addEventListener('click', selectElement);
+}
 
-// Theo dõi DOM mutations
-const mutationObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-            chrome.runtime.sendMessage({
-                type: 'consoleLog',
-                content: `DOM Changed: ${mutation.target.nodeName} had ${mutation.addedNodes.length} nodes added and ${mutation.removedNodes.length} removed`,
-                level: 'info',
-                timestamp: Date.now()
-            });
-        }
-    });
-});
+function highlightElement(e) {
+  e.preventDefault();
+  const element = e.target;
+  
+  // Remove existing highlights
+  const existing = document.querySelector('.devtools-pro-highlight');
+  if (existing) existing.remove();
 
-mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true
-});
+  // Create highlight overlay
+  const highlight = document.createElement('div');
+  highlight.className = 'devtools-pro-highlight';
+  const rect = element.getBoundingClientRect();
+  
+  Object.assign(highlight.style, {
+    position: 'fixed',
+    border: '2px solid #1a73e8',
+    backgroundColor: 'rgba(26, 115, 232, 0.1)',
+    pointerEvents: 'none',
+    zIndex: 10000,
+    top: rect.top + 'px',
+    left: rect.left + 'px',
+    width: rect.width + 'px',
+    height: rect.height + 'px'
+  });
 
-// Lắng nghe messages từ popup/background
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'inspectElement') {
-        // Bật chế độ inspect
-        document.body.style.cursor = 'crosshair';
-        
-        const clickHandler = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const element = e.target;
-            const elementInfo = {
-                tagName: element.tagName,
-                id: element.id,
-                className: element.className,
-                textContent: element.textContent.substring(0, 100),
-                attributes: Array.from(element.attributes).map(attr => ({
-                    name: attr.name,
-                    value: attr.value
-                }))
-            };
-            
-            chrome.runtime.sendMessage({
-                type: 'elementInspected',
-                element: elementInfo
-            });
-            
-            document.body.style.cursor = 'default';
-            document.removeEventListener('click', clickHandler, true);
-        };
-        
-        document.addEventListener('click', clickHandler, true);
-    }
-});
+  document.body.appendChild(highlight);
+}
+
+function selectElement(e) {
+  e.preventDefault();
+  const element = e.target;
+  
+  // Get element details
+  const details = {
+    tagName: element.tagName.toLowerCase(),
+    id: element.id,
+    classes: Array.from(element.classList),
+    attributes: Array.from(element.attributes).map(attr => ({
+      name: attr.name,
+      value: attr.value
+    })),
+    styles: window.getComputedStyle(element)
+  };
+
+  chrome.runtime.sendMessage({
+    action: 'elementSelected',
+    data: details
+  });
+
+  // Clean up
+  document.removeEventListener('mouseover', highlightElement);
+  document.removeEventListener('click', selectElement);
+  const highlight = document.querySelector('.devtools-pro-highlight');
+  if (highlight) highlight.remove();
+}
