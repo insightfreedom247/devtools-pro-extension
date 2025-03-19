@@ -5,68 +5,95 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  switch (request.action) {
-    case 'debugger':
-      handleDebugger(sendResponse);
-      break;
-    case 'screenshot':
-      handleScreenshot(sendResponse);
-      break;
-    case 'network':
-      handleNetwork(sendResponse);
-      break;
-    case 'memory':
-      handleMemory(sendResponse);
-      break;
-    default:
-      sendResponse({ success: false, error: 'Unknown action' });
+  try {
+    switch (request.action) {
+      case 'debugger':
+        handleDebugger(sendResponse);
+        break;
+      case 'screenshot':
+        handleScreenshot(sendResponse);
+        break;
+      case 'network':
+        handleNetwork(sendResponse);
+        break;
+      case 'memory':
+        handleMemory(sendResponse);
+        break;
+      default:
+        sendResponse({ success: false, error: 'Unknown action' });
+    }
+  } catch (error) {
+    console.error('Error in message handler:', error);
+    sendResponse({ success: false, error: error.message });
   }
-  return true;
+  return true; // Keep the message channel open for async response
 });
 
 // Tool handlers
-function handleDebugger(sendResponse) {
-  chrome.debugger.attach({ tabId: -1 }, '1.3', () => {
-    if (chrome.runtime.lastError) {
-      sendResponse({ success: false, error: chrome.runtime.lastError });
-    } else {
+async function handleDebugger(sendResponse) {
+  try {
+    if (chrome.debugger) {
+      await chrome.debugger.attach({ tabId: -1 }, '1.3');
       sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'Debugger API not available' });
     }
-  });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
 }
 
-function handleScreenshot(sendResponse) {
-  chrome.tabs.captureVisibleTab(null, { format: 'png' }, dataUrl => {
-    if (chrome.runtime.lastError) {
-      sendResponse({ success: false, error: chrome.runtime.lastError });
-    } else {
-      chrome.downloads.download({
-        url: dataUrl,
-        filename: `screenshot-${Date.now()}.png`
-      }, () => {
-        sendResponse({ success: true });
-      });
+async function handleScreenshot(sendResponse) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      sendResponse({ success: false, error: 'No active tab found' });
+      return;
     }
-  });
+
+    const dataUrl = await chrome.tabs.captureVisibleTab(null, { format: 'png' });
+    await chrome.downloads.download({
+      url: dataUrl,
+      filename: `screenshot-${Date.now()}.png`
+    });
+    
+    sendResponse({ success: true });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
 }
 
 function handleNetwork(sendResponse) {
-  chrome.webRequest.onBeforeRequest.addListener(
-    details => {
-      console.log('Network request:', details);
-    },
-    { urls: ['<all_urls>'] }
-  );
-  sendResponse({ success: true });
+  try {
+    if (!chrome.webRequest) {
+      sendResponse({ success: false, error: 'WebRequest API not available' });
+      return;
+    }
+
+    chrome.webRequest.onBeforeRequest.addListener(
+      details => {
+        console.log('Network request:', details);
+      },
+      { urls: ['<all_urls>'] }
+    );
+    
+    sendResponse({ success: true });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
 }
 
-function handleMemory(sendResponse) {
-  if (chrome.system && chrome.system.memory) {
-    chrome.system.memory.getInfo(info => {
-      sendResponse({ success: true, data: info });
-    });
-  } else {
-    sendResponse({ success: false, error: 'Memory API not available' });
+async function handleMemory(sendResponse) {
+  try {
+    if (!chrome.system || !chrome.system.memory) {
+      sendResponse({ success: false, error: 'Memory API not available' });
+      return;
+    }
+
+    const info = await chrome.system.memory.getInfo();
+    sendResponse({ success: true, data: info });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
   }
 }
 
