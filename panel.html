@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>DevTools Pro Panel</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: 100vh;
+        }
+
+        .sidebar {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 16px;
+        }
+
+        .main-content {
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .tool-group {
+            margin-bottom: 24px;
+        }
+
+        .tool-group h2 {
+            color: #64B5F6;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .tool-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            color: #ccc;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+
+        .tool-item:hover {
+            background: #333;
+        }
+
+        .tool-item .material-icons {
+            margin-right: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 500;
+            color: #1976d2;
+            margin: 8px 0;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .log-viewer {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .log-info { color: #64B5F6; }
+        .log-error { color: #ef5350; }
+        .log-warning { color: #ffb74d; }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .button:hover {
+            background: #1565c0;
+        }
+
+        .button .material-icons {
+            margin-right: 8px;
+            font-size: 18px;
+        }
+
+        .tab-container {
+            margin-bottom: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px 8px 0 0;
+            overflow: hidden;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #1976d2;
+            color: white;
+        }
+
+        .tab-content {
+            background: white;
+            padding: 16px;
+            border-radius: 0 0 8px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="tool-group">
+                <h2>Debug Tools</h2>
+                <div class="tool-item" id="inspectElement">
+                    <span class="material-icons">colorize</span>
+                    Kiểm tra phần tử
+                </div>
+                <div class="tool-item" id="consoleViewer">
+                    <span class="material-icons">terminal</span>
+                    Console Viewer
+                </div>
+                <div class="tool-item" id="networkMonitor">
+                    <span class="material-icons">network_check</span>
+                    Network Monitor
+                </div>
+            </div>
+
+            <div class="tool-group">
+                <h2>Performance</h2>
+                <div class="tool-item" id="performanceAnalyzer">
+                    <span class="material-icons">speed</span>
+                    Phân tích hiệu suất
+                </div>
+                <div class="tool-item" id="memoryAnalyzer">
+                    <span class="material-icons">memory</span>
+                    Phân tích bộ nhớ
+                </div>
+            </div>
+
+            <div class="tool-group">
+                <h2>Utilities</h2>
+                <div class="tool-item" id="screenshot">
+                    <span class="material-icons">photo_camera</span>
+                    Chụp màn hình
+                </div>
+                <div class="tool-item" id="colorPicker">
+                    <span class="material-icons">colorize</span>
+                    Color Picker
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">CPU Usage</div>
+                    <div class="metric-value" id="cpuUsage">0%</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Memory Usage</div>
+                    <div class="metric-value" id="memoryUsage">0 MB</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Network Requests</div>
+                    <div class="metric-value" id="requestCount">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">DOM Elements</div>
+                    <div class="metric-value" id="domCount">0</div>
+                </div>
+            </div>
+
+            <div class="tab-container">
+                <div class="tabs">
+                    <div class="tab active" data-tab="console">Console</div>
+                    <div class="tab" data-tab="network">Network</div>
+                    <div class="tab" data-tab="performance">Performance</div>
+                </div>
+                <div class="tab-content">
+                    <div id="consoleTab" class="log-viewer">
+                        <!-- Console logs will be added here -->
+                    </div>
+                    <div id="networkTab" class="log-viewer" style="display: none;">
+                        <!-- Network requests will be added here -->
+                    </div>
+                    <div id="performanceTab" style="display: none;">
+                        <!-- Performance metrics will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <button class="button" id="clearLogs">
+                    <span class="material-icons">clear_all</span>
+                    Xóa logs
+                </button>
+                <button class="button" id="downloadLogs">
+                    <span class="material-icons">download</span>
+                    Tải logs
+                </button>
+                <button class="button" id="copyLogs">
+                    <span class="material-icons">content_copy</span>
+                    Sao chép logs
+                </button>
+            </div>
+        </div>
+    </div>
+    <script src="panel.js"></script>
+</body>
+</html>
