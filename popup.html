@@ -3,93 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <title>DevTools Pro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     body {
-      width: 400px;
-      padding: 20px;
-      font-family: 'Roboto', sans-serif;
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    .logo {
-      width: 48px;
-      height: 48px;
-      margin-right: 15px;
-    }
-    .title {
-      font-size: 24px;
-      font-weight: 500;
-      color: #1a73e8;
-    }
-    .tools-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 15px;
-    }
-    .tool-card {
-      padding: 15px;
-      border-radius: 8px;
-      background: #f8f9fa;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .tool-card:hover {
-      background: #e8f0fe;
-      transform: translateY(-2px);
-    }
-    .tool-title {
-      font-weight: 500;
-      margin-bottom: 8px;
-      color: #202124;
-    }
-    .tool-description {
-      font-size: 13px;
-      color: #5f6368;
-    }
-    .status-bar {
-      margin-top: 20px;
+      width: 300px;
       padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    button {
+      width: 100%;
+      margin: 5px 0;
+      padding: 8px;
+      background: #4285f4;
+      color: white;
+      border: none;
       border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3367d6;
+    }
+    #status {
+      margin-top: 10px;
+      padding: 8px;
       background: #e8f0fe;
-      color: #1967d2;
-      font-size: 13px;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="icons/icon48.png" class="logo" alt="DevTools Pro Logo">
-    <div class="title">DevTools Pro</div>
-  </div>
-  
-  <div class="tools-grid">
-    <div class="tool-card" id="debugger">
-      <div class="tool-title">Debug Tools</div>
-      <div class="tool-description">Advanced debugging và performance analysis</div>
-    </div>
-    
-    <div class="tool-card" id="screenshot">
-      <div class="tool-title">Screenshot</div>
-      <div class="tool-description">Chụp ảnh màn hình và chỉnh sửa</div>
-    </div>
-    
-    <div class="tool-card" id="network">
-      <div class="tool-title">Network Monitor</div>
-      <div class="tool-description">Theo dõi và phân tích network requests</div>
-    </div>
-    
-    <div class="tool-card" id="memory">
-      <div class="tool-title">Memory Analysis</div>
-      <div class="tool-description">Phân tích và tối ưu bộ nhớ</div>
-    </div>
-  </div>
-
-  <div class="status-bar" id="status">Ready to use</div>
-  
+  <button id="capture">Chụp màn hình</button>
+  <button id="inspect">Kiểm tra Element</button>
+  <button id="clear">Xóa logs</button>
+  <div id="status">Sẵn sàng sử dụng</div>
   <script src="popup.js"></script>
 </body>
 </html>

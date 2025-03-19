@@ -1,59 +1,41 @@
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize tools
-  const tools = ['debugger', 'screenshot', 'network', 'memory'];
-  const statusBar = document.getElementById('status');
+  const status = document.getElementById('status');
 
-  // Add click handlers for each tool
-  tools.forEach(toolId => {
-    const toolCard = document.getElementById(toolId);
-    toolCard.addEventListener('click', () => activateTool(toolId));
+  document.getElementById('capture').addEventListener('click', function() {
+    chrome.tabs.captureVisibleTab(null, {format: 'png'}, function(dataUrl) {
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = 'screenshot.png';
+      link.click();
+      status.textContent = 'Đã chụp màn hình!';
+    });
   });
 
-  // Tool activation handler
-  function activateTool(toolId) {
-    statusBar.textContent = `Activating ${toolId}...`;
-    
-    chrome.runtime.sendMessage({ action: toolId }, response => {
-      if (response && response.success) {
-        statusBar.textContent = `${toolId} activated successfully`;
-      } else {
-        statusBar.textContent = `Error activating ${toolId}`;
-      }
-    });
-  }
-
-  // Initialize system monitoring
-  function updateSystemStatus() {
-    if (chrome.system && chrome.system.cpu && chrome.system.memory) {
-      chrome.system.cpu.getInfo(cpuInfo => {
-        chrome.system.memory.getInfo(memoryInfo => {
-          const cpuUsage = calculateCPUUsage(cpuInfo);
-          const memoryUsage = calculateMemoryUsage(memoryInfo);
-          
-          statusBar.textContent = `CPU: ${cpuUsage}% | Memory: ${memoryUsage}%`;
-        });
+  document.getElementById('inspect').addEventListener('click', function() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      chrome.scripting.executeScript({
+        target: {tabId: tabs[0].id},
+        function: inspectElement
       });
-    }
-  }
+      status.textContent = 'Đang kiểm tra element...';
+    });
+  });
 
-  // Helper functions for system monitoring
-  function calculateCPUUsage(cpuInfo) {
-    if (!cpuInfo || !cpuInfo.processors) return 'N/A';
-    
-    const usage = cpuInfo.processors.reduce((acc, processor) => {
-      return acc + processor.usage.user;
-    }, 0) / cpuInfo.processors.length;
-
-    return Math.round(usage);
-  }
-
-  function calculateMemoryUsage(memoryInfo) {
-    if (!memoryInfo) return 'N/A';
-    
-    const used = memoryInfo.capacity - memoryInfo.availableCapacity;
-    return Math.round((used / memoryInfo.capacity) * 100);
-  }
-
-  // Update system status every 5 seconds
-  setInterval(updateSystemStatus, 5000);
+  document.getElementById('clear').addEventListener('click', function() {
+    console.clear();
+    status.textContent = 'Đã xóa logs!';
+  });
 });
+
+function inspectElement() {
+  document.body.style.cursor = 'crosshair';
+  
+  function onClick(e) {
+    e.preventDefault();
+    console.log('Selected element:', e.target);
+    document.body.style.cursor = 'default';
+    document.removeEventListener('click', onClick);
+  }
+
+  document.addEventListener('click', onClick);
+}
